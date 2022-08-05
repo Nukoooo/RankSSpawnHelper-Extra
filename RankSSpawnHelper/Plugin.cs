@@ -28,9 +28,7 @@ public class Plugin : IDalamudPlugin
 
         _windowSystem = new WindowSystem("RankSSpawnHelper-Extra");
         _windowSystem.AddWindow(Service.ConfigWindow);
-
-        Service.Interface.UiBuilder.BuildFonts += Fonts.OnBuildFonts;
-        Service.Interface.UiBuilder.RebuildFonts();
+        
         Service.Interface.UiBuilder.OpenConfigUi += OpenConfigUi;
         Service.Interface.UiBuilder.Draw += _windowSystem.Draw;
 
@@ -46,8 +44,7 @@ public class Plugin : IDalamudPlugin
         Service.AutoDiscardItem.Dispose();
         Service.LeaveDuty.Dispose();
         Service.Journal.Dispose();
-
-        Service.Interface.UiBuilder.BuildFonts -= Fonts.OnBuildFonts;
+        
         Service.Interface.UiBuilder.OpenConfigUi -= OpenConfigUi;
         Service.Interface.UiBuilder.Draw -= _windowSystem.Draw;
     }
