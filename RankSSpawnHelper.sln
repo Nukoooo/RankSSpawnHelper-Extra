@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32602.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RankSSpawnHelper-Extra", "RankSSpawnHelper\RankSSpawnHelper-Extra.csproj", "{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{F0982E90-1F95-44BA-A831-E8B5D16796C8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClickLib", "lib\ClickLib\ClickLib\ClickLib.csproj", "{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Debug|x64.Build.0 = Debug|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Release|x64.ActiveCfg = Release|Any CPU
+		{6F75B8CC-4D60-4EE0-8CA7-0E4C65868476}.Release|x64.Build.0 = Release|Any CPU
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Debug|Any CPU.Build.0 = Debug|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Debug|x64.ActiveCfg = Debug|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Debug|x64.Build.0 = Debug|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Release|Any CPU.ActiveCfg = Release|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Release|Any CPU.Build.0 = Release|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Release|x64.ActiveCfg = Release|x64
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C3BFDD58-CBCA-4AE3-A001-E3A0238A0F7F} = {F0982E90-1F95-44BA-A831-E8B5D16796C8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E9818A8E-ED0F-4062-958D-593793D9F8BB}
+	EndGlobalSection
+EndGlobal
