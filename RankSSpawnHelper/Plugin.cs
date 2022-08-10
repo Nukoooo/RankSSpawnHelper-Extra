@@ -22,13 +22,13 @@ public class Plugin : IDalamudPlugin
 
         Service.Commands = new Commands();
         Service.ConfigWindow = new ConfigWindow();
-        Service.AutoDiscardItem = new AutoDiscardItem(pluginInterface);
+        Service.AutoDiscardItem = new AutoDiscardItem();
         Service.LeaveDuty = new LeaveDuty();
         Service.Journal = new JournalStuff();
 
         _windowSystem = new WindowSystem("RankSSpawnHelper-Extra");
         _windowSystem.AddWindow(Service.ConfigWindow);
-        
+
         Service.Interface.UiBuilder.OpenConfigUi += OpenConfigUi;
         Service.Interface.UiBuilder.Draw += _windowSystem.Draw;
 
@@ -44,7 +44,7 @@ public class Plugin : IDalamudPlugin
         Service.AutoDiscardItem.Dispose();
         Service.LeaveDuty.Dispose();
         Service.Journal.Dispose();
-        
+
         Service.Interface.UiBuilder.OpenConfigUi -= OpenConfigUi;
         Service.Interface.UiBuilder.Draw -= _windowSystem.Draw;
     }

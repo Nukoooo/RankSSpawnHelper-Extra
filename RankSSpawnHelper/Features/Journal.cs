@@ -15,7 +15,7 @@ public class JournalStuff : IDisposable
     {
         unsafe
         {
-            _addonSetupHook = new Hook<AddonSetupDelegate>(Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 8B 83 ?? ?? ?? ?? C1 E8 14"), hk_AddonSetup);
+            _addonSetupHook = Hook<AddonSetupDelegate>.FromAddress(Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 8B 83 ?? ?? ?? ?? C1 E8 14"), hk_AddonSetup);
             _addonSetupHook.Enable();
         }
     }

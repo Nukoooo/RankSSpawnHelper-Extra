@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Dalamud.Game.Command;
 
 namespace RankSSpawnHelper;
@@ -27,7 +26,6 @@ public class Commands : IDisposable
         {
             ShowInHelp = false
         });
-
     }
 
     public void Dispose()
@@ -36,7 +34,7 @@ public class Commands : IDisposable
         Service.CommandManager.RemoveHandler(DebugCommand);
         Service.CommandManager.RemoveHandler(LeaveDuty);
     }
-    
+
     private static void OnCommand(string command, string args)
     {
         switch (command)

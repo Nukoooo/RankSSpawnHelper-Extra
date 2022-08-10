@@ -13,8 +13,10 @@ public class ConfigWindow : Window
 {
     // private const double EORZEA_TIME_CONSTANT = 3600D / 175D;
     private const ImGuiTableFlags TableFlags = ImGuiTableFlags.Borders | ImGuiTableFlags.SizingStretchProp;
+
     // private const string TimeRegexPattern = @"([0-5]?\d):([0-5]?\d)";
     private string _searchText = string.Empty;
+
     private string _serverUrl = string.Empty;
     // private string _timeInput = string.Empty;
     // private string _trackerInputText = string.Empty;
@@ -144,6 +146,7 @@ public class ConfigWindow : Window
                     Service.Configuration._autoDiscardItem = autoThrow;
                     Service.Configuration.Save();
                 }
+
                 DrawItemSearchTable();
                 ImGui.EndTabItem();
             }
