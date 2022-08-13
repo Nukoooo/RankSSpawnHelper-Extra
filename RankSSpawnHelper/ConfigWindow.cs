@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Windowing;
@@ -14,12 +15,13 @@ public class ConfigWindow : Window
     // private const double EORZEA_TIME_CONSTANT = 3600D / 175D;
     private const ImGuiTableFlags TableFlags = ImGuiTableFlags.Borders | ImGuiTableFlags.SizingStretchProp;
 
-    // private const string TimeRegexPattern = @"([0-5]?\d):([0-5]?\d)";
+    private const string TimeRegexPattern = @"([0-5]?\d):([0-5]?\d)";
+    private string _etMessageSet = Service.Configuration._etMessageSet;
+    private string _etMessageUnset = Service.Configuration._etMessageUnset;
+    private string _mainSetTimeMessage = Service.Configuration._mainSetTimeMessage;
     private string _searchText = string.Empty;
 
-    private string _serverUrl = string.Empty;
-    // private string _timeInput = string.Empty;
-    // private string _trackerInputText = string.Empty;
+    private string _timeInput = string.Empty;
 
     public ConfigWindow() : base("S怪触发小助手-Ex##RankSSpawnHelperEx")
     {
@@ -45,7 +47,7 @@ public class ConfigWindow : Window
         ImGui.TextColored(ImGuiColors.DalamudGrey, "(?)");
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("如果搜索框里没有输入文本或者搜索无结果，表格就会显示已添加的物品\n如果搜索无结果就会显示已添加的物品\n加号是添加，减号是移除，如果这都看不懂那你就是猪猪");
 
-        var result = Service.AutoDiscardItem.ItemInfos.Where(i => i.name.Contains(_searchText)).Select(i => new ItemInfo_t(i.id, i.name)).ToArray();
+        var result = Service.AutoDiscardItem.ItemInfos.Where(i => i.name.Contains(_searchText)).Select(i => new ItemInfo(i.id, i.name)).ToArray();
 
         var isEmpty = _searchText == string.Empty || result.Length == 0;
 
@@ -59,7 +61,7 @@ public class ConfigWindow : Window
 
             if (isEmpty)
             {
-                result = Service.AutoDiscardItem.ItemInfos.Where(i => Service.Configuration._itemsToDiscard.Contains(i.id)).Select(i => new ItemInfo_t(i.id, i.name)).ToArray();
+                result = Service.AutoDiscardItem.ItemInfos.Where(i => Service.Configuration._itemsToDiscard.Contains(i.id)).Select(i => new ItemInfo(i.id, i.name)).ToArray();
 
                 if (result.Length != 0)
                 {
@@ -133,6 +135,64 @@ public class ConfigWindow : Window
         }
     }
 
+    private void DrawEtHelper()
+    {
+        var currentET = Utils.LocalTimeToEorzeaTime();
+        ImGui.Text($"当前艾欧泽亚时间: {currentET.ToShortDateString()} {currentET.ToLongTimeString()}");
+        ImGui.Text($"目标艾欧泽亚时间: {Utils.TargetEorzeaTime.ToShortDateString()} {Utils.TargetEorzeaTime.ToLongTimeString()}");
+        ImGui.NewLine();
+
+        ImGui.Text("在多久后定时(本地时间):");
+        ImGui.InputTextWithHint("##timeInputYes", "格式: 分钟:秒 如00:24, 00:01", ref _timeInput, 32);
+        ImGui.SameLine();
+        if (ImGui.Button("确定"))
+        {
+            var result = Regex.Match(_timeInput, TimeRegexPattern);
+            if (result.Length == 0)
+            {
+                Service.ChatGui.PrintError("[定ET] 时间格式不对. 请检查格式");
+                Utils.PlayChatSoundSound(11);
+            }
+            else
+            {
+                var minutes = int.Parse(result.Groups[1].ToString());
+                var seconds = int.Parse(result.Groups[2].ToString());
+                Utils.TargetEorzeaTime = Utils.LocalTimeToEorzeaTime(minutes, seconds);
+            }
+        }
+
+        ImGui.Text("喊话消息");
+        ImGui.SameLine();
+        ImGui.TextColored(ImGuiColors.DalamudGrey, "(?)");
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("目前可用的关键词有:\n{tpos} - S怪的位置，可以用<flag>代替\n{tname} - S怪的名字，可以用<t>代替\n{etmsg} - ET的消息，如果未定ET或者ET是旧的就会用未定ET的消息，反之亦然\n{et} - ET");
+
+        if (ImGui.InputText("主消息", ref _mainSetTimeMessage, 256)) Service.Configuration._mainSetTimeMessage = _mainSetTimeMessage;
+        if (ImGui.InputText("ET已定", ref _etMessageSet, 256)) Service.Configuration._etMessageSet = _etMessageSet;
+        if (ImGui.InputText("ET未定", ref _etMessageUnset, 256)) Service.Configuration._etMessageUnset = _etMessageUnset;
+
+        if (ImGui.Button("消息预览"))
+        {
+            Service.Configuration.Save();
+            Utils.PrintSetTimeMessage(true);
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("发送"))
+        {
+            Service.Configuration.Save();
+            Utils.PrintSetTimeMessage(false, Service.Configuration._printInYell);
+        }
+
+        ImGui.SameLine();
+        var printInYell = Service.Configuration._printInYell;
+        if (ImGui.Checkbox("同时发送到呼喊频道里", ref printInYell))
+        {
+            Service.Configuration._printInYell = printInYell;
+            Service.Configuration.Save();
+        }
+    }
+
     public override void Draw()
     {
         ImGui.BeginTabBar("exxxtra主菜单aaaaa");
@@ -151,23 +211,11 @@ public class ConfigWindow : Window
                 ImGui.EndTabItem();
             }
 
-            /*if (ImGui.BeginTabItem("定ET+喊话"))
+            if (ImGui.BeginTabItem("定ET+喊话"))
             {
-                unsafe
-                {
-                    var eorzeaTime = DateTimeOffset.FromUnixTimeSeconds(Framework.Instance()->EorzeaTime).DateTime;
-                    var localTime = Utils.LocalTimeToEorzeaTime();
-                    
-                    ImGui.Text($"FrameWork->eorzeaTime: {eorzeaTime.Hour}:{eorzeaTime.Minute}:{eorzeaTime.Second}");
-                    ImGui.Text($"LocalTimeToEorzeaTime: {localTime.Hour}:{localTime.Minute}:{localTime.Second}");
-                    
-                    ImGui.Text("在多久后定时(本地时间):");
-                    ImGui.InputTextWithHint("##timeInputYes", "格式: 分钟:秒 如00:24, 00:01", ref _timeInput, 32);
-
-
-                }
+                DrawEtHelper();
                 ImGui.EndTabItem();
-            }*/
+            }
 
             if (ImGui.BeginTabItem("其他"))
             {

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using ClickLib.Clicks;
 using Dalamud.Hooking;
@@ -15,12 +14,12 @@ using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace RankSSpawnHelper.Features;
 
-public class ItemInfo_t
+public class ItemInfo
 {
     public uint id;
     public string name;
 
-    public ItemInfo_t(uint id, string name)
+    public ItemInfo(uint id, string name)
     {
         this.id = id;
         this.name = name;
@@ -33,9 +32,8 @@ public class AutoDiscardItem : IDisposable
 
     private static Hook<AddonSetupDelegate> _addonSetupHook;
     private static Hook<OpenInventoryContext> _openInventoryContextHook;
-    private readonly CancellationTokenSource _eventLoopTokenSource = new();
 
-    public List<ItemInfo_t> ItemInfos = new();
+    public List<ItemInfo> ItemInfos = new();
 
     public AutoDiscardItem()
     {
@@ -55,7 +53,7 @@ public class AutoDiscardItem : IDisposable
 
             try
             {
-                var info = new List<ItemInfo_t>();
+                var info = new List<ItemInfo>();
 
                 info.AddRange(Service.DataManager.GetExcelSheet<Item>().Where(
                     i => !string.IsNullOrEmpty(i.Name) &&
@@ -64,7 +62,7 @@ public class AutoDiscardItem : IDisposable
                              (i.FilterGroup == 12 && i.RowId != 36256 && i.RowId != 27850) || // 材料比如矮人棉，庵摩罗果等 但因为秧鸡胸脯肉和厄尔庇斯鸟蛋是特定地图扔的，所以不会加进列表里
                              i.FilterGroup == 17 // 鱼饵，比如沙蚕
                          )
-                ).Select(i => new ItemInfo_t(i.RowId, i.Name)));
+                ).Select(i => new ItemInfo(i.RowId, i.Name)));
 
                 PluginLog.Debug($"Finished loading {info.Count} items");
                 ItemInfos = info;
@@ -173,7 +171,7 @@ public class AutoDiscardItem : IDisposable
         return Service.Configuration._itemsToDiscard.Contains(id) || (Service.ClientState.TerritoryType == 961 && id == 36256) || (Service.ClientState.TerritoryType == 813 && id == 27850);
     }
 
-    private unsafe void* hk_OpenInventoryContext(AgentInventoryContext* agent, InventoryType inventoryType, ushort slot, int a4, ushort a5, byte a6)
+    private static unsafe void* hk_OpenInventoryContext(AgentInventoryContext* agent, InventoryType inventoryType, ushort slot, int a4, ushort a5, byte a6)
     {
         var original = _openInventoryContextHook.Original(agent, inventoryType, slot, a4, a5, a6);
 

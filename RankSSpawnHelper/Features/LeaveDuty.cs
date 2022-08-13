@@ -1,34 +1,25 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using ClickLib.Clicks;
 using Dalamud.Game.ClientState.Conditions;
-using FFXIVClientStructs.FFXIV.Client.System.Framework;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
 namespace RankSSpawnHelper.Features;
 
 public class LeaveDuty : IDisposable
 {
-    // taken from https://github.com/UnknownX7/OOBlugin/blob/master/Game.cs
-    private static IntPtr _contentsFinderMenuAgent = IntPtr.Zero;
-    private static OpenAbandonDutyDelegate _openAbandonDuty;
+    // taken from https://github.com/marimelon/LeaveDutyCmdPlugin/blob/master/LeaveDutyCmdPlugin/LeaveDutyCmdPlugin.cs
+    private readonly LeaveDutyDelegate _leaveDungeon;
 
     public LeaveDuty()
     {
-        unsafe
+        try
         {
-            try
-            {
-                _openAbandonDuty = Marshal.GetDelegateForFunctionPointer<OpenAbandonDutyDelegate>(Service.SigScanner.ScanText("E8 ?? ?? ?? ?? EB 90 48 8B CB"));
-                _contentsFinderMenuAgent = (IntPtr)Framework.Instance()->GetUiModule()->GetAgentModule()->GetAgentByInternalId(AgentId.ContentsFinderMenu);
-                Service.Condition.ConditionChange += OnConditionChange;
-            }
-            catch (Exception e)
-            {
-                throw new InvalidDataException($"Failed to load leave duty. r:{e}");
-            }
+            _leaveDungeon = Marshal.GetDelegateForFunctionPointer<LeaveDutyDelegate>(Service.SigScanner.ScanText("40 53 48 83 ec 20 48 8b 05 ?? ?? ?? ?? 0f b6 d9"));
+            Service.Condition.ConditionChange += OnConditionChange;
+        }
+        catch (Exception e)
+        {
+            throw new InvalidDataException($"Failed to load leave duty. r:{e}");
         }
     }
 
@@ -58,27 +49,14 @@ public class LeaveDuty : IDisposable
             return;
         }
 
-        if (Service.ClientState.TerritoryType != 157)
+        if (Service.ClientState.TerritoryType != 1045)
         {
-            Service.ChatGui.PrintError("[自动退本] 该功能只能在溶洞用");
+            Service.ChatGui.PrintError("[自动退本] 该功能只能在假火神(伊芙利特讨伐战)用");
             return;
         }
 
-        _contentsFinderMenuAgent = _contentsFinderMenuAgent != IntPtr.Zero ? _contentsFinderMenuAgent : Service.GameGui.FindAgentInterface("ContentsFinderMenu");
-        if (_contentsFinderMenuAgent == IntPtr.Zero) return;
-
-        _openAbandonDuty(_contentsFinderMenuAgent);
-
-        Task.Run(async () =>
-        {
-            await Task.Delay(Service.Configuration._clickDelay);
-
-            var yesNoAddon = Service.GameGui.GetAddonByName("SelectYesno", 1);
-            if (yesNoAddon == IntPtr.Zero) return;
-
-            ClickSelectYesNo.Using(yesNoAddon).Yes();
-        });
+        _leaveDungeon((char)0);
     }
 
-    private delegate void OpenAbandonDutyDelegate(IntPtr agent);
+    private delegate void LeaveDutyDelegate(char isTimeout);
 }

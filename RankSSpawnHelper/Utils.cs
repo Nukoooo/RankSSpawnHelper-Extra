@@ -1,21 +1,82 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel;
+using Lumina.Excel.GeneratedSheets;
 
 namespace RankSSpawnHelper;
 
 internal static unsafe class Utils
 {
+    internal const int MinutesOfHour = 60;
+    internal const int HoursOfDay = 24;
+    internal const int DaysOfMonth = 32;
+    internal const int MonthsOfYear = 12;
+    private const double TimeRate = 175.0;
+
     private static UIModule* _uiModule;
     private static ProcessChatBoxDelegate _processChatBox;
+    private static PlaySound _playSound;
+
+    private static ExcelSheet<TerritoryType> _terr;
+    private static List<string> _rankSMonsterName;
+
+    public static DateTime TargetEorzeaTime = LocalTimeToEorzeaTime();
+
 
     public static void Initialize()
     {
+        _terr = Service.DataManager.GetExcelSheet<TerritoryType>();
+        var bNpcNames = Service.DataManager.GetExcelSheet<BNpcName>();
+
+        var names = new List<string>();
+        // 2.0
+        {
+            for (uint i = 2953; i < 2970; i++)
+                names.Add(bNpcNames.GetRow(i).Singular.RawString);
+        }
+
+        // 3.0
+        {
+            for (uint i = 4374; i < 4381; i++)
+                if (i != 4379)
+                    names.Add(bNpcNames.GetRow(i).Singular.RawString);
+        }
+
+        // 4.0
+        {
+            for (uint i = 5984; i < 5990; i++)
+                names.Add(bNpcNames.GetRow(i).Singular.RawString);
+        }
+
+        // 5.0
+        {
+            names.Add(bNpcNames.GetRow(8653).Singular.RawString); // 阿格拉俄珀
+            for (uint i = 8895; i < 8916; i += 5)
+                names.Add(bNpcNames.GetRow(i).Singular.RawString);
+        }
+
+        // 6.0
+        {
+            for (uint i = 10615; i < 10623; i++)
+                if (i != 10616) // 克尔的侍从
+                    names.Add(bNpcNames.GetRow(i).Singular.RawString);
+        }
+
+        _rankSMonsterName = names;
+
         _uiModule = Framework.Instance()->GetUiModule();
         var easierProcessChatBoxPtr = Service.SigScanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 20 48 8B FA 48 8B D9 45 84 C9");
         _processChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(easierProcessChatBoxPtr);
+
+        var playSoundAddress = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 4D 39 BE");
+        _playSound = Marshal.GetDelegateForFunctionPointer<PlaySound>(playSoundAddress);
     }
 
     public static void ExecuteCommand(string cmd)
@@ -45,16 +106,124 @@ internal static unsafe class Utils
         }
     }
 
-    public static DateTime LocalTimeToEorzeaTime()
+    public static void PlayChatSoundSound(uint effectId)
+    {
+        if (effectId is < 1 or 19 or 21)
+        {
+            Service.ChatGui.PrintError("Valid chat sfx values are 1 through 16.");
+            return;
+        }
+
+        _playSound(effectId + 0x24u, 0, 0, 0);
+    }
+
+    public static DateTime LocalTimeToEorzeaTime(double minutes = 0, double seconds = 0)
     {
         const double eorzeaMultiplier = 3600D / 175D;
 
-        var epochTicks = DateTimeOffset.Now.DateTime.ToUniversalTime().AddSeconds(2.998).Ticks - new DateTime(1970, 1, 1).Ticks;
+        var epochTicks = DateTimeOffset.Now.DateTime.AddMinutes(minutes).AddSeconds(seconds + 0.58).ToUniversalTime().Ticks - new DateTime(1970, 1, 1).Ticks;
 
         var eorzeaTicks = (long)Math.Round(epochTicks * eorzeaMultiplier);
 
         return new DateTime(eorzeaTicks);
     }
+
+    public static DateTime EorzaTimeToLocalTime(DateTime et)
+    {
+        var months = MonthsOfYear * (et.Year - 1) + (et.Month - 1);
+        var days = DaysOfMonth * months + (et.Day - 1);
+        var hours = HoursOfDay * days + et.Hour;
+        var minutes = MinutesOfHour * hours + et.Minute;
+        var seconds = (long)Math.Round(minutes * TimeRate / MinutesOfHour);
+
+        var utc = DateTimeOffset.FromUnixTimeSeconds(seconds);
+        return utc.DateTime;
+    }
+
+    private static float ToMapCoordinate(float val, float scale)
+    {
+        var c = scale / 100.0f;
+
+        val *= c;
+
+        return 41.0f / c * ((val + 1024.0f) / 2048.0f) + 1;
+    }
+
+    public static bool IsSRankMonster(string name)
+    {
+        return _rankSMonsterName.Contains(name);
+    }
+
+    public static MapLinkPayload CreateMapLinkPayload(Vector3 pos, ushort territoryId)
+    {
+        var territory = _terr.GetRow(territoryId);
+
+        var x = ToMapCoordinate(pos.X, territory.Map.Value.SizeFactor);
+        var y = ToMapCoordinate(pos.Y, territory.Map.Value.SizeFactor);
+        var payload = new MapLinkPayload(territory.RowId, territory.Map.Row, x, y);
+
+        return payload;
+    }
+
+    public static void PrintSetTimeMessage(bool preview = false, bool yell = false)
+    {
+        if (preview && Service.ClientState.LocalPlayer == null)
+            return;
+
+        var objectAtTwo = Service.ObjectTable[2];
+        if (objectAtTwo == null && !preview)
+        {
+            Service.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
+            return;
+        }
+
+        if (!preview && !IsSRankMonster(objectAtTwo.Name.TextValue))
+        {
+            Service.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
+            return;
+        }
+
+        var msg = Service.Configuration._mainSetTimeMessage;
+        if (msg.Contains("{tpos}")) msg = msg.Replace("{tpos}", "<flag>");
+
+        if (msg.Contains("{tname}")) msg = msg.Replace("{tname}", preview ? Service.ClientState.LocalPlayer.Name.TextValue : objectAtTwo.Name.TextValue);
+
+        var currentEt = LocalTimeToEorzeaTime();
+        if (msg.Contains("{etmsg}"))
+        {
+            var unsetMessage = Service.Configuration._etMessageUnset;
+            var setMessage = Service.Configuration._etMessageSet;
+
+            if (preview)
+            {
+                var backup = msg.Replace("{etmsg}", "");
+                msg = "已定ET消息:" + backup + setMessage.Replace("{et}", $"{TargetEorzeaTime.Hour}:{TargetEorzeaTime.Minute}") + "\n未定ET消息:";
+                msg += backup + unsetMessage;
+            }
+            else
+            {
+                msg = msg.Replace("{etmsg}", currentEt > TargetEorzeaTime ? unsetMessage : setMessage.Replace("{et}", $"{TargetEorzeaTime.Hour}:{TargetEorzeaTime.Minute}"));
+            }
+        }
+
+        var mapLinkPayload = CreateMapLinkPayload(preview ? Service.ClientState.LocalPlayer.Position : objectAtTwo.Position, Service.ClientState.TerritoryType);
+        Service.GameGui.OpenMapWithMapLink(mapLinkPayload);
+
+        var areaMapPtr = Service.GameGui.GetAddonByName("AreaMap", 1);
+        if (areaMapPtr != IntPtr.Zero) ((AtkUnitBase*)areaMapPtr)->Hide(false);
+
+        if (preview)
+        {
+            ExecuteCommand($"/e {msg}");
+            return;
+        }
+
+        ExecuteCommand($"/sh {msg}");
+        if (yell)
+            ExecuteCommand($"/yell {msg}");
+    }
+
+    private delegate bool PlaySound(uint effectId, long a2, long a3, byte a4);
 
     private delegate void ProcessChatBoxDelegate(UIModule* uiModule, IntPtr message, IntPtr unused, byte a4);
 }
