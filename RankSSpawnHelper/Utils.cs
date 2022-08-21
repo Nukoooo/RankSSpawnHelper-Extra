@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -159,7 +161,7 @@ internal static unsafe class Utils
         var territory = _terr.GetRow(territoryId);
 
         var x = ToMapCoordinate(pos.X, territory.Map.Value.SizeFactor);
-        var y = ToMapCoordinate(pos.Y, territory.Map.Value.SizeFactor);
+        var y = ToMapCoordinate(pos.Z, territory.Map.Value.SizeFactor);
         var payload = new MapLinkPayload(territory.RowId, territory.Map.Row, x, y);
 
         return payload;
@@ -170,14 +172,14 @@ internal static unsafe class Utils
         if (preview && Service.ClientState.LocalPlayer == null)
             return;
 
-        var objectAtTwo = Service.ObjectTable[2];
-        if (objectAtTwo == null && !preview)
+        var obj = Service.ObjectTable.Where(i => i.IsValid() && i.ObjectKind == ObjectKind.BattleNpc && _rankSMonsterName.Contains(i.Name.TextValue)).Select(i => i).ToList();
+        if (obj.Count == 0 && !preview)
         {
             Service.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
             return;
         }
 
-        if (!preview && !IsSRankMonster(objectAtTwo.Name.TextValue))
+        if (!preview && !IsSRankMonster(obj[0].Name.TextValue))
         {
             Service.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
             return;
@@ -186,7 +188,7 @@ internal static unsafe class Utils
         var msg = Service.Configuration._mainSetTimeMessage;
         if (msg.Contains("{tpos}")) msg = msg.Replace("{tpos}", "<flag>");
 
-        if (msg.Contains("{tname}")) msg = msg.Replace("{tname}", preview ? Service.ClientState.LocalPlayer.Name.TextValue : objectAtTwo.Name.TextValue);
+        if (msg.Contains("{tname}")) msg = msg.Replace("{tname}", preview ? Service.ClientState.LocalPlayer.Name.TextValue : obj[0].Name.TextValue);
 
         var currentEt = LocalTimeToEorzeaTime();
         if (msg.Contains("{etmsg}"))
@@ -197,16 +199,16 @@ internal static unsafe class Utils
             if (preview)
             {
                 var backup = msg.Replace("{etmsg}", "");
-                msg = "已定ET消息:" + backup + setMessage.Replace("{et}", $"{TargetEorzeaTime.Hour}:{TargetEorzeaTime.Minute}") + "\n未定ET消息:";
+                msg = "已定ET消息:" + backup + setMessage.Replace("{et}", $"{TargetEorzeaTime.Hour:D2}:{TargetEorzeaTime.Minute:D2}") + "\n未定ET消息:";
                 msg += backup + unsetMessage;
             }
             else
             {
-                msg = msg.Replace("{etmsg}", currentEt > TargetEorzeaTime ? unsetMessage : setMessage.Replace("{et}", $"{TargetEorzeaTime.Hour}:{TargetEorzeaTime.Minute}"));
+                msg = msg.Replace("{etmsg}", currentEt > TargetEorzeaTime ? unsetMessage : setMessage.Replace("{et}", $"{TargetEorzeaTime.Hour:D2}:{TargetEorzeaTime.Minute:D2}"));
             }
         }
 
-        var mapLinkPayload = CreateMapLinkPayload(preview ? Service.ClientState.LocalPlayer.Position : objectAtTwo.Position, Service.ClientState.TerritoryType);
+        var mapLinkPayload = CreateMapLinkPayload(preview ? Service.ClientState.LocalPlayer.Position : obj[0].Position, Service.ClientState.TerritoryType);
         Service.GameGui.OpenMapWithMapLink(mapLinkPayload);
 
         var areaMapPtr = Service.GameGui.GetAddonByName("AreaMap", 1);

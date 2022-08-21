@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Command;
 
 namespace RankSSpawnHelper;
@@ -40,7 +42,7 @@ public class Commands : IDisposable
             });
 
         foreach (var cmd in _printEt)
-            Service.CommandManager.AddHandler(cmd, new CommandInfo(PrintET)
+            Service.CommandManager.AddHandler(cmd, new CommandInfo(PrintEt)
             {
                 ShowInHelp = true,
                 HelpMessage = "喊ET"
@@ -64,14 +66,8 @@ public class Commands : IDisposable
             return;
         }
 
-        var objectAtTwo = Service.ObjectTable[2];
-        if (objectAtTwo == null)
-        {
-            Service.ChatGui.PrintError("[定ET] 地图里没有S怪");
-            return;
-        }
-
-        if (Utils.IsSRankMonster(objectAtTwo.Name.TextValue))
+        var obj = Service.ObjectTable.Where(i => i.IsValid() && i.ObjectKind == ObjectKind.BattleNpc && Utils.IsSRankMonster(i.Name.TextValue)).Select(i => i).ToList();
+        if (obj.Count == 0)
         {
             Service.ChatGui.PrintError("[定ET] 地图里没有S怪");
             return;
@@ -87,10 +83,10 @@ public class Commands : IDisposable
         var minutes = int.Parse(match.Groups[1].ToString());
         var seconds = int.Parse(match.Groups[2].ToString());
         Utils.TargetEorzeaTime = Utils.LocalTimeToEorzeaTime(minutes, seconds);
-        Service.ChatGui.Print($"[定ET] ET已设置为 {Utils.TargetEorzeaTime.Hour}:{Utils.TargetEorzeaTime.Minute}");
+        Service.ChatGui.Print($"[定ET] ET已设置为 {Utils.TargetEorzeaTime.Hour:D2}:{Utils.TargetEorzeaTime.Minute:D2}");
     }
 
-    private static void PrintET(string command, string args)
+    private static void PrintEt(string command, string args)
     {
         Utils.PrintSetTimeMessage(false, Service.Configuration._printInYell);
     }
@@ -107,9 +103,6 @@ public class Commands : IDisposable
             case DebugCommand:
             {
                 Service.ChatGui.Print($"territoryId: {Service.ClientState.TerritoryType}, classJob:{Service.ClientState.LocalPlayer.ClassJob.Id}, PartyLength: {Service.PartyList.Length}");
-
-                var objectAt2 = Service.ObjectTable[2];
-                if (objectAt2 != null) Service.ChatGui.Print($"{Utils.IsSRankMonster(objectAt2.Name.TextValue)}");
 
                 break;
             }

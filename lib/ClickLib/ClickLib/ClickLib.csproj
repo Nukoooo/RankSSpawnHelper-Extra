@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+	  <DalamudLibPath>D:\Dalamud\addon\Hooks\dev\</DalamudLibPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -40,7 +40,7 @@
   <ItemGroup>
     <AdditionalFiles Include="..\stylecop.json" />
     <Reference Include="FFXIVClientStructs">
-      <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\FFXIVClientStructs.dll</HintPath>
+      <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
