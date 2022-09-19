@@ -22,10 +22,7 @@ public class ConfigWindow : Window
 
     private string _timeInput = string.Empty;
 
-    public ConfigWindow() : base("S怪触发小助手-Ex##RankSSpawnHelperEx")
-    {
-        Flags = ImGuiWindowFlags.AlwaysAutoResize;
-    }
+    public ConfigWindow() : base("S怪触发小助手-Ex##RankSSpawnHelperEx") => Flags = ImGuiWindowFlags.AlwaysAutoResize;
 
     private void DrawItemSearchTable()
     {
@@ -231,6 +228,17 @@ public class ConfigWindow : Window
                     Service.Configuration._autoJournal = autoJournal;
                     Service.Configuration.Save();
                 }
+
+                var summonMinion = Service.Configuration._summonMinion;
+                if (ImGui.Checkbox("自动召唤宠物", ref summonMinion))
+                {
+                    Service.Configuration._summonMinion = summonMinion;
+                    Service.Configuration.Save();
+                }
+                ImGui.SameLine();
+                ImGui.TextColored(ImGuiColors.DalamudGrey, "(?)");
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("仅在延夏/伊尔美格/迷津/天外天垓有用");
+
 
                 var clickDelay = Service.Configuration._clickDelay;
                 if (ImGui.SliderInt("自动点击延迟", ref clickDelay, 30, 1000, "%dms"))

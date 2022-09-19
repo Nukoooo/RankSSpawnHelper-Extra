@@ -25,6 +25,7 @@ public class Plugin : IDalamudPlugin
         Service.AutoDiscardItem = new AutoDiscardItem();
         Service.LeaveDuty = new LeaveDuty();
         Service.Journal = new JournalStuff();
+        Service.SummonMinion = new SummonMinion();
 
         _windowSystem = new WindowSystem("RankSSpawnHelper-Extra");
         _windowSystem.AddWindow(Service.ConfigWindow);
@@ -44,6 +45,7 @@ public class Plugin : IDalamudPlugin
         Service.AutoDiscardItem.Dispose();
         Service.LeaveDuty.Dispose();
         Service.Journal.Dispose();
+        Service.SummonMinion.Dispose();
 
         Service.Interface.UiBuilder.OpenConfigUi -= OpenConfigUi;
         Service.Interface.UiBuilder.Draw -= _windowSystem.Draw;

@@ -5,16 +5,15 @@ namespace RankSSpawnHelper;
 
 public class Configuration : IPluginConfiguration
 {
-    // 自动扔背包里的物品
     public bool _autoDiscardItem { get; set; } = false;
-
-    // 自动退本(青魔消debuff)
+    
     public bool _autoLeaveDuty { get; set; } = false;
-
-    // 自动开始/放弃理符
+    
     public bool _autoJournal { get; set; } = false;
 
     public List<uint> _itemsToDiscard { get; set; } = new();
+
+    public bool _summonMinion { get; set; } = new();
 
     public int _clickDelay { get; set; } = 100;
 

@@ -123,7 +123,7 @@ internal static unsafe class Utils
     {
         const double eorzeaMultiplier = 3600D / 175D;
 
-        var epochTicks = DateTimeOffset.Now.DateTime.AddMinutes(minutes).AddSeconds(seconds + 0.58).ToUniversalTime().Ticks - new DateTime(1970, 1, 1).Ticks;
+        var epochTicks = DateTimeOffset.FromUnixTimeSeconds(Framework.Instance()->ServerTime).AddMinutes(minutes).AddSeconds(seconds).ToUniversalTime().Ticks - new DateTime(1970, 1, 1).Ticks;
 
         var eorzeaTicks = (long)Math.Round(epochTicks * eorzeaMultiplier);
 

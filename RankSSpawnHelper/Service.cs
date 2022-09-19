@@ -21,6 +21,7 @@ internal class Service
     internal static AutoDiscardItem AutoDiscardItem { get; set; } = null!;
     internal static LeaveDuty LeaveDuty { get; set; } = null!;
     internal static JournalStuff Journal { get; set; } = null!;
+    internal static SummonMinion SummonMinion { get; set; } = null!;
 
     [PluginService] internal static DalamudPluginInterface Interface { get; private set; } = null!;
 
