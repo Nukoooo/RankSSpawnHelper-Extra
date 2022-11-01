@@ -24,6 +24,7 @@ internal class SummonMinion : IDisposable
         { 816, 303 },
         { 956, 434 },
         { 614, 215 },
+        {397, 148 }
     };
 
     private readonly List<Tuple<uint, string>> _unlockedMinions = new();
@@ -48,7 +49,7 @@ internal class SummonMinion : IDisposable
             }
 
             var unlockedCompanions = Service.DataManager.GetExcelSheet<Companion>().Where(i =>
-                IsMinionUnlocked(i.RowId) && i.RowId is 434 or 423 or 215 or 303 && _unlockedMinions.Find(j => j.Item1 != i.RowId) == null);
+                IsMinionUnlocked(i.RowId) && i.RowId is 434 or 423 or 215 or 303 or 148 && _unlockedMinions.Find(j => j.Item1 != i.RowId) == null);
 
             foreach (var companion in unlockedCompanions)
             {
