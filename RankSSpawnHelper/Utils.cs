@@ -4,8 +4,10 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -14,7 +16,7 @@ using Lumina.Excel.GeneratedSheets;
 
 namespace RankSSpawnHelper;
 
-internal static unsafe class Utils
+internal static class Utils
 {
     internal const int MinutesOfHour = 60;
     internal const int HoursOfDay = 24;
@@ -22,14 +24,14 @@ internal static unsafe class Utils
     internal const int MonthsOfYear = 12;
     private const double TimeRate = 175.0;
 
-    private static UIModule* _uiModule;
+    private static unsafe UIModule* _uiModule;
     private static ProcessChatBoxDelegate _processChatBox;
     private static PlaySound _playSound;
 
     private static ExcelSheet<TerritoryType> _terr;
     private static List<string> _rankSMonsterName;
 
-    public static DateTime TargetEorzeaTime = LocalTimeToEorzeaTime();
+    public static DateTime TargetEorzeaTime = new();
 
 
     public static void Initialize()
@@ -73,15 +75,19 @@ internal static unsafe class Utils
 
         _rankSMonsterName = names;
 
-        _uiModule = Framework.Instance()->GetUiModule();
         var easierProcessChatBoxPtr = Service.SigScanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 20 48 8B FA 48 8B D9 45 84 C9");
         _processChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(easierProcessChatBoxPtr);
 
         var playSoundAddress = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 4D 39 BE");
         _playSound = Marshal.GetDelegateForFunctionPointer<PlaySound>(playSoundAddress);
+
+        unsafe
+        {
+            _uiModule = Framework.Instance()->GetUiModule();
+        }
     }
 
-    public static void ExecuteCommand(string cmd)
+    public static unsafe void ExecuteCommand(string cmd)
     {
         try
         {
@@ -107,7 +113,7 @@ internal static unsafe class Utils
             Service.ChatGui.PrintError(err.Message);
         }
     }
-
+    
     public static void PlayChatSoundSound(uint effectId)
     {
         if (effectId is < 1 or 19 or 21)
@@ -119,15 +125,24 @@ internal static unsafe class Utils
         _playSound(effectId + 0x24u, 0, 0, 0);
     }
 
-    public static DateTime LocalTimeToEorzeaTime(double minutes = 0, double seconds = 0)
+    public static unsafe DateTime LocalTimeToEorzeaTime(double minutes = 0, double seconds = 0)
     {
-        const double eorzeaMultiplier = 3600D / 175D;
+        try
+        {
+            const double eorzeaMultiplier = 3600D / 175D;
 
-        var epochTicks = DateTimeOffset.FromUnixTimeSeconds(Framework.Instance()->ServerTime).AddMinutes(minutes).AddSeconds(seconds).ToUniversalTime().Ticks - new DateTime(1970, 1, 1).Ticks;
+            var epochTicks = DateTimeOffset.FromUnixTimeSeconds(Framework.Instance()->ServerTime).AddMinutes(minutes).AddSeconds(seconds).ToUniversalTime().Ticks - new DateTime(1970, 1, 1).Ticks;
 
-        var eorzeaTicks = (long)Math.Round(epochTicks * eorzeaMultiplier);
+            var eorzeaTicks = (long)Math.Round(epochTicks * eorzeaMultiplier);
 
-        return new DateTime(eorzeaTicks);
+            return new DateTime(eorzeaTicks);
+
+        }
+        catch (Exception e)
+        {
+            PluginLog.Debug(e, "Exception happened when converting local time to eorzea time");
+            return new DateTime(0);
+        }
     }
 
     public static DateTime EorzaTimeToLocalTime(DateTime et)
@@ -167,7 +182,7 @@ internal static unsafe class Utils
         return payload;
     }
 
-    public static void PrintSetTimeMessage(bool preview = false, bool yell = false)
+    public static unsafe void PrintSetTimeMessage(bool preview = false, bool yell = false)
     {
         if (preview && Service.ClientState.LocalPlayer == null)
             return;
@@ -227,5 +242,5 @@ internal static unsafe class Utils
 
     private delegate bool PlaySound(uint effectId, long a2, long a3, byte a4);
 
-    private delegate void ProcessChatBoxDelegate(UIModule* uiModule, IntPtr message, IntPtr unused, byte a4);
+    private unsafe delegate void ProcessChatBoxDelegate(UIModule* uiModule, IntPtr message, IntPtr unused, byte a4);
 }
