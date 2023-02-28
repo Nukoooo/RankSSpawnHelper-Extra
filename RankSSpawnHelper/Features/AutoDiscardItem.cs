@@ -58,7 +58,7 @@ public class AutoDiscardItem : IDisposable
                 info.AddRange(Service.DataManager.GetExcelSheet<Item>().Where(
                     i => !string.IsNullOrEmpty(i.Name) &&
                          (
-                             (i.FilterGroup == 4 && i.LevelItem.Value.RowId == 1 && i.IsDyeable) || // 普通装备且装等为1的物品 比如草布马裤，超级米饭的斗笠
+                             (i.FilterGroup == 4 && i.LevelItem.Value.RowId == 1 && !i.IsUnique) || // 普通装备且装等为1的物品 比如草布马裤，超级米饭的斗笠
                              (i.FilterGroup == 12 && i.RowId != 36256 && i.RowId != 27850) || // 材料比如矮人棉，庵摩罗果等 但因为秧鸡胸脯肉和厄尔庇斯鸟蛋是特定地图扔的，所以不会加进列表里
                              i.FilterGroup == 17 // 鱼饵，比如沙蚕
                          )
@@ -140,6 +140,9 @@ public class AutoDiscardItem : IDisposable
                     if (!IsAllowedToDiscard(inventoryContext->TargetDummyItem.ItemID))
                         return original;
 
+                    if (inventoryContext->TargetDummyItem.ItemID == 36256 && inventoryContext->TargetDummyItem.Quantity < 5)
+                        return original;
+
                     ClickInputNumeric.Using(new IntPtr(addon)).SetValue(inventoryContext->TargetDummyItem.ItemID == 36256 ? 5 : 1, inventoryContext->TargetDummyItem.ItemID == 36256);
 
                     ProcessConfirm(new IntPtr(addon));
@@ -200,6 +203,13 @@ public class AutoDiscardItem : IDisposable
         if (!IsAllowedToDiscard(itemId))
             return original;
 
+        switch (Service.ClientState.TerritoryType)
+        {
+            case 961 when itemId != 36256:
+            case 813 when itemId != 27850:
+                return original;
+        }
+
         var addonId = agent->AgentInterface.GetAddonID();
         if (addonId == 0)
             return original;
@@ -225,9 +235,6 @@ public class AutoDiscardItem : IDisposable
                 case "拆分":
                     switch (Service.ClientState.TerritoryType)
                     {
-                        case 961 when itemId != 36256:
-                        case 813 when itemId != 27850:
-                            return original;
                         case 961 when itemQuantity <= 5:
                         case 813 when itemQuantity == 1:
                         case 621 when itemQuantity == 1:
@@ -241,8 +248,8 @@ public class AutoDiscardItem : IDisposable
                     switch (Service.ClientState.TerritoryType)
                     {
                         // 湖区只能扔一件
-                        case 961 when itemId != 36256 && itemQuantity != 5:
-                        case 813 when itemId != 27850 && itemQuantity != 1:
+                        case 961 when itemQuantity != 5:
+                        case 813 when itemQuantity != 1:
                         case 621 when itemQuantity != 1:
                             continue;
                     }

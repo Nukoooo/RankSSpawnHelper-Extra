@@ -1,8 +1,9 @@
 ﻿{
   "Name": "S怪触发小助手-Extra",
   "Author": "Nuko",
-  "Description": "一个触发S怪用的小工具",
+  "Description": "一个触发S怪用的小工具, 但是底裤比较低",
   "RepoUrl": "https://github.com/NukoOoOoOoO/RankSSpawnHelper",
-  "Tags": ["S怪触发", "触发", "S怪"],
-  "Changelog": ""
+  "Tags": [ "S怪触发", "触发", "S怪" ],
+  "Changelog": "",
+  "Punchline": "一个触发S怪用的小工具, 但是底裤比较低"
 }

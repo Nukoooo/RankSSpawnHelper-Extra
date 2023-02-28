@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net5.0-windows</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<LangVersion>10</LangVersion>
-		<Version>1.0.0.9</Version>
+		<Version>1.0.0.11</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -28,7 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="2.1.6" />
+		<PackageReference Include="DalamudPackager" Version="2.1.8" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -65,5 +65,7 @@
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
+
+	<ProjectExtensions><VisualStudio><UserProperties ranksspawnhelper-extra_1json__JsonSchema="https://ffizer.github.io/ffizer/ffizer.schema.json" /></VisualStudio></ProjectExtensions>
 
 </Project>
