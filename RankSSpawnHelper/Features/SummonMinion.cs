@@ -49,10 +49,11 @@ internal class SummonMinion : IDisposable
             }
 
             var unlockedCompanions = Service.DataManager.GetExcelSheet<Companion>().Where(i =>
-                IsMinionUnlocked(i.RowId) && i.RowId is 434 or 423 or 215 or 303 or 148 && _unlockedMinions.Find(j => j.Item1 != i.RowId) == null);
+                IsMinionUnlocked(i.RowId) && i.RowId is 434 or 423 or 215 or 303 or 148);
 
             foreach (var companion in unlockedCompanions)
             {
+                PluginLog.Debug($"{companion.Singular.RawString}");
                 _unlockedMinions.Add(new Tuple<uint, string>(companion.RowId, companion.Singular.RawString));
             }
         });
@@ -105,7 +106,7 @@ internal class SummonMinion : IDisposable
 
     private async Task<bool> Summon(Tuple<uint, string> minion)
     {
-        if (Service.ObjectTable[1] == null)
+        if (Service.ObjectTable[1] == null && CanUseAction(minion.Item1))
         {
             UseAction(minion.Item1);
             return true;
@@ -117,17 +118,19 @@ internal class SummonMinion : IDisposable
             if (obj == null)
             {
                 UseAction(minion.Item1);
-                return true;
+                continue;
             }
 
             if (obj.ObjectKind != ObjectKind.Companion)
             {
+                UseAction(minion.Item1);
                 await Task.Delay(1000);
                 continue;
             }
 
             if (!CanUseAction(minion.Item1))
             {
+                UseAction(minion.Item1);
                 await Task.Delay(1000);
                 continue;
             }
