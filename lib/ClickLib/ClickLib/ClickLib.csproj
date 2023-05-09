@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <Platforms>x64</Platforms>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-	  <DalamudLibPath>D:\Dalamud\addon\Hooks\dev\</DalamudLibPath>
+	  <DalamudLibPath>D:\XIVLauncherCN\Roaming\addon\Hooks\dev\</DalamudLibPath>
   </PropertyGroup>
 
   <PropertyGroup>

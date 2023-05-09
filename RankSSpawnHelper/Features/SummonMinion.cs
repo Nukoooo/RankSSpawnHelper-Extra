@@ -130,7 +130,7 @@ internal class SummonMinion : IDisposable
 
             if (!CanUseAction(minion.Item1))
             {
-                UseAction(minion.Item1);
+                // UseAction(minion.Item1);
                 await Task.Delay(1000);
                 continue;
             }
