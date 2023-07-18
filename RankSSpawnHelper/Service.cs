@@ -42,4 +42,6 @@ internal class Service
     [PluginService] internal static PartyList PartyList { get; set; } = null!;
 
     [PluginService] internal static ObjectTable ObjectTable { get; set; } = null!;
+
+    [PluginService] internal static Framework Framework { get; set; } = null!;
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Logging;
@@ -13,10 +14,11 @@ namespace RankSSpawnHelper.Features;
 
 internal class SummonMinion : IDisposable
 {
-    private const int MaximumTryCount = 15;
-
-    [Signature("48 8D 0D ?? ?? ?? ?? 0F B6 04 08 84 D0 75 10 B8 ?? ?? ?? ?? 48 8B 5C 24", ScanType = ScanType.StaticAddress)]
+    [Signature("48 8D 0D ?? ?? ?? ?? 0F B6 04 08 84 D0 75 10 B8 ?? ?? ?? ?? 48 8B 5C 24",
+        ScanType = ScanType.StaticAddress)]
     private readonly IntPtr? _minionBitmask = null;
+
+    private DateTime _lastUpDateTime;
 
     private readonly Dictionary<ushort, uint> _minionMap = new()
     {
@@ -24,7 +26,7 @@ internal class SummonMinion : IDisposable
         { 816, 303 },
         { 956, 434 },
         { 614, 215 },
-        {397, 148 }
+        { 397, 148 }
     };
 
     private readonly List<Tuple<uint, string>> _unlockedMinions = new();
@@ -33,6 +35,7 @@ internal class SummonMinion : IDisposable
     {
         SignatureHelper.Initialise(this);
         Service.Condition.ConditionChange += OnConditionChange;
+        Service.Framework.Update += FrameworkOnUpdate;
 
         unsafe bool IsMinionUnlocked(uint minionId)
         {
@@ -43,10 +46,7 @@ internal class SummonMinion : IDisposable
 
         Task.Run(async () =>
         {
-            while (Service.ClientState.LocalPlayer == null)
-            {
-                await Task.Delay(1000);
-            }
+            while (Service.ClientState.LocalPlayer == null) await Task.Delay(1000);
 
             var unlockedCompanions = Service.DataManager.GetExcelSheet<Companion>().Where(i =>
                 IsMinionUnlocked(i.RowId) && i.RowId is 434 or 423 or 215 or 303 or 148);
@@ -59,95 +59,81 @@ internal class SummonMinion : IDisposable
         });
     }
 
-    public void Dispose() => Service.Condition.ConditionChange -= OnConditionChange;
-
-    private async void Execute()
+    public void Dispose()
     {
-        if (!Service.Configuration._summonMinion)
-            return;
-
-        while (true)
-        {
-            await Task.Delay(500);
-
-            if (!_minionMap.ContainsKey(Service.ClientState.TerritoryType))
-            {
-                return;
-            }
-
-            if (!_minionMap.TryGetValue(Service.ClientState.TerritoryType, out var currnetMinionId))
-            {
-                return;
-            }
-
-            var minion = _unlockedMinions.Find(i => i.Item1 == currnetMinionId);
-
-            if (minion == null)
-            {
-                return;
-            }
-
-            if (Service.Condition[ConditionFlag.Mounted] || Service.Condition[ConditionFlag.Mounted2] || Service.Condition[ConditionFlag.Unknown57] ||
-                Service.Condition[ConditionFlag.Mounting] || Service.Condition[ConditionFlag.Mounting71])
-                continue;
-
-            if (!CanUseAction(minion.Item1))
-            {
-                continue;
-            }
-            
-            var result = await Summon(minion);
-            if (result)
-                break;
-        }
+        Service.Condition.ConditionChange -= OnConditionChange;
+        Service.Framework.Update -= FrameworkOnUpdate;
     }
 
-    private static unsafe bool CanUseAction(uint id) => ActionManager.Instance()->GetActionStatus(ActionType.Unk_8, id) == 0 && !ActionManager.Instance()->IsRecastTimerActive(ActionType.Spell, id);
-
-    private async Task<bool> Summon(Tuple<uint, string> minion)
+    private void FrameworkOnUpdate(Framework framework)
     {
+        if (DateTime.Now - _lastUpDateTime <= TimeSpan.FromSeconds(2))
+        {
+            return;
+        }
+
+        if (!Service.Configuration._summonMinion)
+            goto end;
+
+        if (!_minionMap.ContainsKey(Service.ClientState.TerritoryType)) goto end;
+
+        if (!_minionMap.TryGetValue(Service.ClientState.TerritoryType, out var currnetMinionId)) goto end;
+
+        var minion = _unlockedMinions.Find(i => i.Item1 == currnetMinionId);
+
+        if (minion == null) goto end;
+
+        if (Service.Condition[ConditionFlag.Mounted] || Service.Condition[ConditionFlag.Mounted2] ||
+            Service.Condition[ConditionFlag.Unknown57] ||
+            Service.Condition[ConditionFlag.Mounting] || Service.Condition[ConditionFlag.Mounting71])
+            goto end;
+
+        if (!CanUseAction(minion.Item1))
+            goto end;
+
         if (Service.ObjectTable[1] == null && CanUseAction(minion.Item1))
         {
             UseAction(minion.Item1);
-            return true;
+            goto end;
         }
-        
-        while (true)
+
+        var obj = Service.ObjectTable[1];
+        if (obj == null)
         {
-            var obj = Service.ObjectTable[1];
-            if (obj == null)
-            {
-                UseAction(minion.Item1);
-                continue;
-            }
-
-            if (obj.ObjectKind != ObjectKind.Companion)
-            {
-                UseAction(minion.Item1);
-                await Task.Delay(1000);
-                continue;
-            }
-
-            if (!CanUseAction(minion.Item1))
-            {
-                // UseAction(minion.Item1);
-                await Task.Delay(1000);
-                continue;
-            }
-
-            if (obj.Name.TextValue == minion.Item2)
-                return true;
-
             UseAction(minion.Item1);
-            await Task.Delay(1000);
+            goto end;
         }
+
+        if (obj.ObjectKind != ObjectKind.Companion)
+        {
+            UseAction(minion.Item1);
+            goto end;
+        }
+
+        if (!CanUseAction(minion.Item1))
+            goto end;
+        if (obj.Name.TextValue == minion.Item2)
+            goto end;
+
+        UseAction(minion.Item1);
+
+        end:
+        _lastUpDateTime = DateTime.Now;
     }
 
-    private static unsafe void UseAction(uint id) => ActionManager.Instance()->UseAction(ActionType.Unk_8, id);
+    private static unsafe bool CanUseAction(uint id)
+    {
+        return ActionManager.Instance()->GetActionStatus(ActionType.Unk_8, id) == 0 &&
+               !ActionManager.Instance()->IsRecastTimerActive(ActionType.Spell, id);
+    }
+    
+    private static unsafe void UseAction(uint id)
+    {
+        ActionManager.Instance()->UseAction(ActionType.Unk_8, id);
+    }
 
     private void OnConditionChange(ConditionFlag flag, bool value)
     {
         if (flag != ConditionFlag.BetweenAreas51 || value) return;
-        Execute();
     }
 }

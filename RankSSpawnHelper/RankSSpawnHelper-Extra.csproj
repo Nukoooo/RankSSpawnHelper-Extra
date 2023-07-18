@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<LangVersion>10</LangVersion>
-		<Version>1.0.0.13</Version>
+		<Version>1.0.0.14</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,10 +23,6 @@
 		<DalamudLibPath>D:\XIVLauncherCN\Roaming\addon\Hooks\dev\</DalamudLibPath>
 	</PropertyGroup>
 		
-	<ItemGroup>
-		<None Include="$(OutputPath)WastonWebsocket.dll" Pack="true" PackagePath="lib\$(TargetFramework)"></None>
-	</ItemGroup>
-
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="2.1.11" />
 	</ItemGroup>
