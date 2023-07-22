@@ -34,7 +34,6 @@ internal class SummonMinion : IDisposable
     public SummonMinion()
     {
         SignatureHelper.Initialise(this);
-        Service.Condition.ConditionChange += OnConditionChange;
         Service.Framework.Update += FrameworkOnUpdate;
 
         unsafe bool IsMinionUnlocked(uint minionId)
@@ -61,7 +60,6 @@ internal class SummonMinion : IDisposable
 
     public void Dispose()
     {
-        Service.Condition.ConditionChange -= OnConditionChange;
         Service.Framework.Update -= FrameworkOnUpdate;
     }
 
@@ -130,10 +128,5 @@ internal class SummonMinion : IDisposable
     private static unsafe void UseAction(uint id)
     {
         ActionManager.Instance()->UseAction(ActionType.Unk_8, id);
-    }
-
-    private void OnConditionChange(ConditionFlag flag, bool value)
-    {
-        if (flag != ConditionFlag.BetweenAreas51 || value) return;
     }
 }
