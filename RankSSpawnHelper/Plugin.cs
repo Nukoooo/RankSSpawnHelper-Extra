@@ -1,5 +1,4 @@
 ﻿using System;
-using ClickLib;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -14,45 +13,42 @@ public class Plugin : IDalamudPlugin
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
     {
-        pluginInterface.Create<Service>();
-        Click.Initialize();
+        pluginInterface.Create<DalamudApi>();
         Utils.Initialize();
 
-        Service.Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        DalamudApi.Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-        Service.Commands = new Commands();
-        Service.ConfigWindow = new ConfigWindow();
-        Service.AutoDiscardItem = new AutoDiscardItem();
-        Service.LeaveDuty = new LeaveDuty();
-        Service.Journal = new JournalStuff();
-        Service.SummonMinion = new SummonMinion();
+        DalamudApi.Commands = new();
+        DalamudApi.ConfigWindow = new();
+        DalamudApi.AutoDiscardItem = new();
+        DalamudApi.LeaveDuty = new();
+        DalamudApi.Journal = new();
+        DalamudApi.SummonMinion = new();
 
-        _windowSystem = new WindowSystem("RankSSpawnHelper-Extra");
-        _windowSystem.AddWindow(Service.ConfigWindow);
+        _windowSystem = new("RankSSpawnHelper-Extra");
+        _windowSystem.AddWindow(DalamudApi.ConfigWindow);
 
-        Service.Interface.UiBuilder.OpenConfigUi += OpenConfigUi;
-        Service.Interface.UiBuilder.Draw += _windowSystem.Draw;
-
-        // Utils.ExecuteCommand("/e Initialized");
+        DalamudApi.Interface.UiBuilder.OpenConfigUi += OpenConfigUi;
+        DalamudApi.Interface.UiBuilder.Draw += _windowSystem.Draw;
     }
 
     public string Name => "S怪触发小助手-Extra";
 
     public void Dispose()
     {
-        Service.Commands.Dispose();
+        DalamudApi.Commands.Dispose();
         GC.SuppressFinalize(this);
-        Service.AutoDiscardItem.Dispose();
-        Service.LeaveDuty.Dispose();
-        Service.Journal.Dispose();
-        Service.SummonMinion.Dispose();
+        DalamudApi.AutoDiscardItem.Dispose();
+        DalamudApi.LeaveDuty.Dispose();
+        DalamudApi.Journal.Dispose();
+        DalamudApi.SummonMinion.Dispose();
 
-        Service.Interface.UiBuilder.OpenConfigUi -= OpenConfigUi;
-        Service.Interface.UiBuilder.Draw -= _windowSystem.Draw;
+        DalamudApi.Interface.UiBuilder.OpenConfigUi -= OpenConfigUi;
+        DalamudApi.Interface.UiBuilder.Draw -= _windowSystem.Draw;
     }
 
     private static void OpenConfigUi()
     {
-        Service.ConfigWindow.IsOpen = true;
+        DalamudApi.ConfigWindow.IsOpen = true;
     }
 }

@@ -26,6 +26,6 @@ public class Configuration : IPluginConfiguration
 
     public void Save()
     {
-        Service.Interface.SavePluginConfig(this);
+        DalamudApi.Interface.SavePluginConfig(this);
     }
 }

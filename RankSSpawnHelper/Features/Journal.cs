@@ -1,137 +1,142 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using ClickLib.Clicks;
-using Dalamud.Hooking;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace RankSSpawnHelper.Features;
 
 public class JournalStuff : IDisposable
 {
-    private static Hook<AddonSetupDelegate> _addonSetupHook;
+    [StructLayout(LayoutKind.Explicit)]
+    public struct AddonGuildLeveDifficulty
+    {
+        [FieldOffset(0)] public AtkUnitBase AtkUnitBase;
+    }
 
     public JournalStuff()
     {
-        unsafe
+        DalamudApi.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "GuildLeveDifficulty", AddonGuildLeveDifficultyHandler);
+        DalamudApi.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "JournalDetail", AddonJournalDetailHandler);
+        DalamudApi.AddonLifecycle.RegisterListener(AddonEvent.PostDraw, "_Image", AddonImageHandler);
+        DalamudApi.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectYesno", AddonSelectYesnoHandler);
+        /*unsafe
         {
-            _addonSetupHook = Hook<AddonSetupDelegate>.FromAddress(Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 8B 83 ?? ?? ?? ?? C1 E8 14"), hk_AddonSetup);
+            _addonSetupHook = DalamudApi.GameInteropProvider.HookFromSignature<AddonSetupDelegate>("E8 ?? ?? ?? ?? 8B 83 ?? ?? ?? ?? C1 E8 14", hk_AddonSetup);
             _addonSetupHook.Enable();
-        }
+
+            _addonUpdate = DalamudApi.GameInteropProvider.HookFromSignature<AddonUpdateDelegate>("48 8B 81 ?? ?? ?? ?? 48 85 C0 74 ?? BA ?? ?? ?? ?? 66 85 90",
+                hk_AddonUpdate);
+            _addonUpdate.Enable();
+        }*/
     }
 
     public void Dispose()
     {
-        _addonSetupHook.Dispose();
+        DalamudApi.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "GuildLeveDifficulty", AddonGuildLeveDifficultyHandler);
+        DalamudApi.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "JournalDetail", AddonJournalDetailHandler);
+        DalamudApi.AddonLifecycle.UnregisterListener(AddonEvent.PostDraw, "_Image", AddonImageHandler);
+        DalamudApi.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectYesno", AddonSelectYesnoHandler);
     }
 
-    private static void ProcessYesNo()
+    private unsafe void AddonGuildLeveDifficultyHandler(AddonEvent type, AddonArgs args)
     {
-        Task.Run(async () =>
-        {
-            await Task.Delay(Service.Configuration._clickDelay);
+        if (!DalamudApi.Configuration._autoJournal)
+            return;
+        if (DalamudApi.ClientState.TerritoryType != 152 && DalamudApi.ClientState.TerritoryType != 145)
+            return;
 
-            var yesNoAddon = Service.GameGui.GetAddonByName("SelectYesno", 1);
-            if (yesNoAddon == IntPtr.Zero) return;
-
-            ClickSelectYesNo.Using(yesNoAddon).Yes();
-        });
+        var addon = (AddonGuildLeveDifficulty*)args.Addon;
+        ClickLib.ClickAddonButtonIndex(&addon->AtkUnitBase, 10, 0);
     }
 
-    private static void ProcessGuildLeveDifficulty(IntPtr addon)
+    private unsafe void ProcessJornalDetail(nint addonPtr)
     {
-        Task.Run(async () =>
+        var addon = (AddonJournalDetail*)addonPtr;
+
+        var initButton = addon->InitiateButton;
+        var declineButton = addon->AbandonDeclineButton;
+        if (declineButton == null)
+            return;
+
+        if (!declineButton->AtkComponentBase.AtkResNode->IsVisible)
+            return;
+
+        var text = Marshal.PtrToStringUTF8((nint)initButton->ButtonTextNode->GetText());
+        if (text is "重新挑战" or "开始")
         {
-            await Task.Delay(200);
-
-            ClickGuildLeveDifficulty.Using(addon).Confirm();
-        });
-    }
-
-    private static void ProcessAfterDeclination(IntPtr addonBase, bool canRestart = false)
-    {
-        Task.Run(async () =>
-        {
-            await Task.Delay(200);
-            ClickJournalDetail.Using(addonBase).Start();
-
-            ProcessYesNo();
-
-            if (canRestart)
-            {
-                await Task.Delay(1000);
-
-                ClickJournalDetail.Using(addonBase).Start();
-                ProcessYesNo();
-            }
-        });
-    }
-
-    private static unsafe void ProcessJournalDetail(IntPtr addonBase)
-    {
-        var addon = (AtkUnitBase*)addonBase;
-        var startButtonBase = addon->UldManager.NodeList[6];
-        // var startButton = (AtkComponentButton*)startButtonBase;
-
-        var component = (AtkTextNode*)startButtonBase->GetComponent()->UldManager.NodeList[2];
-        var text = Marshal.PtrToStringUTF8(new IntPtr(component->NodeText.StringPtr)) ?? "empty";
-
-        // PluginLog.Debug($"{startButton->IsEnabled} | {startButtonBase->IsVisible} | {text}");
-
-        if (!startButtonBase->IsVisible) return;
-
-        switch (text)
-        {
-            case "开始":
-                ClickJournalDetail.Using(addonBase).Start();
-                ProcessYesNo();
-                break;
-            case "变更难度":
-                ClickJournalDetail.Using(addonBase).Decline_();
-                ProcessYesNo();
-                ProcessAfterDeclination(addonBase);
-                break;
-            case "重新挑战":
-                ClickJournalDetail.Using(addonBase).Start();
-                ProcessYesNo();
-                ProcessAfterDeclination(addonBase, true);
-                break;
-        }
-    }
-
-    private static void ProcessJournalDetailWrapper(IntPtr addon)
-    {
-        Task.Run(async () =>
-        {
-            await Task.Delay(Service.Configuration._clickDelay);
-            ProcessJournalDetail(addon);
-        });
-    }
-
-    private static unsafe void* hk_AddonSetup(AtkUnitBase* addon)
-    {
-        var original = _addonSetupHook.Original(addon);
-
-        if (!Service.Configuration._autoJournal)
-            return original;
-
-        if (Service.ClientState.TerritoryType != 152 && Service.ClientState.TerritoryType != 145)
-            return original;
-
-        var name = Marshal.PtrToStringUTF8((IntPtr)addon->Name);
-
-        switch (name)
-        {
-            case "JournalDetail":
-                ProcessJournalDetailWrapper(new IntPtr(addon));
-                break;
-            case "GuildLeveDifficulty":
-                ProcessGuildLeveDifficulty(new IntPtr(addon));
-                break;
+            ClickLib.ClickAddonButtonIndex(&addon->AtkUnitBase, 6, 2);
+            return;
         }
 
-        return original;
+        text = Marshal.PtrToStringUTF8((nint)declineButton->ButtonTextNode->GetText());
+        if (text is not ("中止" or "取消"))
+            return;
+
+        ClickLib.ClickAddonButton(&addon->AtkUnitBase, addon->AbandonDeclineButton, 3);
     }
 
-    private unsafe delegate void* AddonSetupDelegate(AtkUnitBase* addon);
+    private void AddonJournalDetailHandler(AddonEvent type, AddonArgs args)
+    {
+        if (!DalamudApi.Configuration._autoJournal)
+            return;
+        if (DalamudApi.ClientState.TerritoryType != 152 && DalamudApi.ClientState.TerritoryType != 145)
+            return;
+
+        Task.Run(async () =>
+        {
+            await Task.Delay(100);
+            ProcessJornalDetail(args.Addon);
+        });
+    }
+
+    private unsafe void AddonImageHandler(AddonEvent type, AddonArgs args)
+    {
+        if (!DalamudApi.Configuration._autoJournal)
+            return;
+        if (DalamudApi.ClientState.TerritoryType != 152 && DalamudApi.ClientState.TerritoryType != 145)
+            return;
+
+        var addon = (AtkUnitBase*)args.Addon;
+
+        if (!addon->IsVisible)
+            return;
+
+        var node = addon->GetNodeById(2);
+        if (node->Type != NodeType.Image)
+            return;
+
+        var imageNode = (AtkImageNode*)node;
+        var textureInfo = imageNode->PartsList->Parts[imageNode->PartId].UldAsset;
+        var texType = textureInfo->AtkTexture.TextureType;
+        if (texType != TextureType.Resource)
+            return;
+
+        var texFileNameStdString =
+            &textureInfo->AtkTexture.Resource->TexFileResourceHandle->ResourceHandle.FileName;
+        var texString = texFileNameStdString->Length < 16
+            ? Marshal.PtrToStringAnsi((IntPtr)texFileNameStdString->Buffer)
+            : Marshal.PtrToStringAnsi((IntPtr)texFileNameStdString->BufferPtr);
+
+        if (texString != null && (texString.Contains("120033") || texString.Contains("120035")))
+            addon->IsVisible = false;
+    }
+
+    private unsafe void AddonSelectYesnoHandler(AddonEvent type, AddonArgs args)
+    {
+        if (!DalamudApi.Configuration._autoJournal)
+            return;
+        if (DalamudApi.ClientState.TerritoryType != 152 && DalamudApi.ClientState.TerritoryType != 145)
+            return;
+        var addon = (AddonSelectYesno*)args.Addon;
+        if (addon == null)
+            return;
+        var text = Marshal.PtrToStringUTF8((nint)addon->PromptText->GetText()) ?? "empty";
+        if (!text.Contains("要开始理符任务吗？") && !text.Contains("要中止当前任务吗？") && !text.Contains("要重新挑战理符任务吗？"))
+            return;
+
+        ClickLib.ClickAddonButton(&addon->AtkUnitBase, addon->YesButton, 0);
+    }
 }

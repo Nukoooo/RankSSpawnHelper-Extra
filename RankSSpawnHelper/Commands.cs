@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.Command;
 
 namespace RankSSpawnHelper;
 
@@ -17,32 +16,32 @@ public class Commands : IDisposable
 
     public Commands()
     {
-        Service.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+        DalamudApi.CommandManager.AddHandler(CommandName, new(OnCommand)
         {
             HelpMessage = "打开菜单",
             ShowInHelp = true
         });
 
-        Service.CommandManager.AddHandler(DebugCommand, new CommandInfo(OnCommand)
+        DalamudApi.CommandManager.AddHandler(DebugCommand, new(OnCommand)
         {
             ShowInHelp = false
         });
 
-        Service.CommandManager.AddHandler(LeaveDuty, new CommandInfo(OnCommand)
+        DalamudApi.CommandManager.AddHandler(LeaveDuty, new(OnCommand)
         {
             ShowInHelp = true,
             HelpMessage = "退出副本(无需确认)"
         });
 
         foreach (var cmd in _setEt)
-            Service.CommandManager.AddHandler(cmd, new CommandInfo(SetET)
+            DalamudApi.CommandManager.AddHandler(cmd, new(SetET)
             {
                 ShowInHelp = true,
                 HelpMessage = "定ET"
             });
 
         foreach (var cmd in _printEt)
-            Service.CommandManager.AddHandler(cmd, new CommandInfo(PrintEt)
+            DalamudApi.CommandManager.AddHandler(cmd, new(PrintEt)
             {
                 ShowInHelp = true,
                 HelpMessage = "喊ET"
@@ -51,44 +50,44 @@ public class Commands : IDisposable
 
     public void Dispose()
     {
-        Service.CommandManager.RemoveHandler(CommandName);
-        Service.CommandManager.RemoveHandler(DebugCommand);
-        Service.CommandManager.RemoveHandler(LeaveDuty);
-        foreach (var cmd in _setEt) Service.CommandManager.RemoveHandler(cmd);
-        foreach (var cmd in _printEt) Service.CommandManager.RemoveHandler(cmd);
+        DalamudApi.CommandManager.RemoveHandler(CommandName);
+        DalamudApi.CommandManager.RemoveHandler(DebugCommand);
+        DalamudApi.CommandManager.RemoveHandler(LeaveDuty);
+        foreach (var cmd in _setEt) DalamudApi.CommandManager.RemoveHandler(cmd);
+        foreach (var cmd in _printEt) DalamudApi.CommandManager.RemoveHandler(cmd);
     }
 
     private static void SetET(string command, string args)
     {
         if (args == string.Empty)
         {
-            Service.ChatGui.PrintError($"使用方法: {command} 分:秒. 可用格式: 00:00, 00:0, 0:0, 0:00 最长可到59:59");
+            DalamudApi.ChatGui.PrintError($"使用方法: {command} 分:秒. 可用格式: 00:00, 00:0, 0:0, 0:00 最长可到59:59");
             return;
         }
 
-        var obj = Service.ObjectTable.Where(i => i.IsValid() && i.ObjectKind == ObjectKind.BattleNpc && Utils.IsSRankMonster(i.Name.TextValue)).Select(i => i).ToList();
+        var obj = DalamudApi.ObjectTable.Where(i => i.IsValid() && i.ObjectKind == ObjectKind.BattleNpc && Utils.IsSRankMonster(i.Name.TextValue)).Select(i => i).ToList();
         if (obj.Count == 0)
         {
-            Service.ChatGui.PrintError("[定ET] 地图里没有S怪");
+            DalamudApi.ChatGui.PrintError("[定ET] 地图里没有S怪");
             return;
         }
 
         var match = Regex.Match(args, @"([0-5]?\d):([0-5]?\d)");
         if (match.Length == 0)
         {
-            Service.ChatGui.PrintError("[定ET] ET的格式不对. 可用格式: 00:00, 00:0, 0:0, 0:00 最长可到59:59");
+            DalamudApi.ChatGui.PrintError("[定ET] ET的格式不对. 可用格式: 00:00, 00:0, 0:0, 0:00 最长可到59:59");
             return;
         }
 
         var minutes = int.Parse(match.Groups[1].ToString());
         var seconds = int.Parse(match.Groups[2].ToString());
         Utils.TargetEorzeaTime = Utils.LocalTimeToEorzeaTime(minutes, seconds);
-        Service.ChatGui.Print($"[定ET] ET已设置为 {Utils.TargetEorzeaTime.Hour:D2}:{Utils.TargetEorzeaTime.Minute:D2}");
+        DalamudApi.ChatGui.Print($"[定ET] ET已设置为 {Utils.TargetEorzeaTime.Hour:D2}:{Utils.TargetEorzeaTime.Minute:D2}");
     }
 
     private static void PrintEt(string command, string args)
     {
-        Utils.PrintSetTimeMessage(false, Service.Configuration._printInYell);
+        Utils.PrintSetTimeMessage(false, DalamudApi.Configuration._printInYell);
     }
 
     private static void OnCommand(string command, string args)
@@ -97,18 +96,18 @@ public class Commands : IDisposable
         {
             case CommandName:
             {
-                Service.ConfigWindow.Toggle();
+                DalamudApi.ConfigWindow.Toggle();
                 break;
             }
             case DebugCommand:
             {
-                Service.ChatGui.Print($"territoryId: {Service.ClientState.TerritoryType}, classJob:{Service.ClientState.LocalPlayer.ClassJob.Id}, PartyLength: {Service.PartyList.Length}");
+                DalamudApi.ChatGui.Print($"territoryId: {DalamudApi.ClientState.TerritoryType}, classJob:{DalamudApi.ClientState.LocalPlayer.ClassJob.Id}, PartyLength: {DalamudApi.PartyList.Length}");
 
                 break;
             }
             case LeaveDuty:
             {
-                Service.LeaveDuty.Execute();
+                DalamudApi.LeaveDuty.Execute();
                 break;
             }
         }

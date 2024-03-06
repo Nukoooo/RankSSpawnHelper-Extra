@@ -4,7 +4,6 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Logging;
@@ -33,11 +32,10 @@ internal static class Utils
 
     public static DateTime TargetEorzeaTime = new();
 
-
-    public static void Initialize()
+    public static unsafe void Initialize()
     {
-        _terr = Service.DataManager.GetExcelSheet<TerritoryType>();
-        var bNpcNames = Service.DataManager.GetExcelSheet<BNpcName>();
+        _terr = DalamudApi.DataManager.GetExcelSheet<TerritoryType>();
+        var bNpcNames = DalamudApi.DataManager.GetExcelSheet<BNpcName>();
 
         var names = new List<string>();
         // 2.0
@@ -75,16 +73,13 @@ internal static class Utils
 
         _rankSMonsterName = names;
 
-        var easierProcessChatBoxPtr = Service.SigScanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 20 48 8B FA 48 8B D9 45 84 C9");
+        var easierProcessChatBoxPtr = DalamudApi.SigScanner.ScanText("48 89 5C 24 ?? 57 48 83 EC 20 48 8B FA 48 8B D9 45 84 C9");
         _processChatBox = Marshal.GetDelegateForFunctionPointer<ProcessChatBoxDelegate>(easierProcessChatBoxPtr);
 
-        var playSoundAddress = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 4D 39 BE");
+        var playSoundAddress = DalamudApi.SigScanner.ScanText("E8 ?? ?? ?? ?? 4D 39 BE");
         _playSound = Marshal.GetDelegateForFunctionPointer<PlaySound>(playSoundAddress);
 
-        unsafe
-        {
-            _uiModule = Framework.Instance()->GetUiModule();
-        }
+        _uiModule = Framework.Instance()->GetUiModule();
     }
 
     public static unsafe void ExecuteCommand(string cmd)
@@ -110,7 +105,7 @@ internal static class Utils
         }
         catch (Exception err)
         {
-            Service.ChatGui.PrintError(err.Message);
+            DalamudApi.ChatGui.PrintError(err.Message);
         }
     }
     
@@ -118,7 +113,7 @@ internal static class Utils
     {
         if (effectId is < 1 or 19 or 21)
         {
-            Service.ChatGui.PrintError("Valid chat sfx values are 1 through 16.");
+            DalamudApi.ChatGui.PrintError("Valid chat sfx values are 1 through 16.");
             return;
         }
 
@@ -135,13 +130,13 @@ internal static class Utils
 
             var eorzeaTicks = (long)Math.Round(epochTicks * eorzeaMultiplier);
 
-            return new DateTime(eorzeaTicks);
+            return new(eorzeaTicks);
 
         }
         catch (Exception e)
         {
             PluginLog.Debug(e, "Exception happened when converting local time to eorzea time");
-            return new DateTime(0);
+            return new(0);
         }
     }
 
@@ -184,32 +179,32 @@ internal static class Utils
 
     public static unsafe void PrintSetTimeMessage(bool preview = false, bool yell = false)
     {
-        if (preview && Service.ClientState.LocalPlayer == null)
+        if (preview && DalamudApi.ClientState.LocalPlayer == null)
             return;
 
-        var obj = Service.ObjectTable.Where(i => i.IsValid() && i.ObjectKind == ObjectKind.BattleNpc && _rankSMonsterName.Contains(i.Name.TextValue)).Select(i => i).ToList();
+        var obj = DalamudApi.ObjectTable.Where(i => i.IsValid() && i.ObjectKind == ObjectKind.BattleNpc && _rankSMonsterName.Contains(i.Name.TextValue)).Select(i => i).ToList();
         if (obj.Count == 0 && !preview)
         {
-            Service.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
+            DalamudApi.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
             return;
         }
 
         if (!preview && !IsSRankMonster(obj[0].Name.TextValue))
         {
-            Service.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
+            DalamudApi.ChatGui.PrintError("[ET喊话] 地图里没有S怪");
             return;
         }
 
-        var msg = Service.Configuration._mainSetTimeMessage;
+        var msg = DalamudApi.Configuration._mainSetTimeMessage;
         if (msg.Contains("{tpos}")) msg = msg.Replace("{tpos}", "<flag>");
 
-        if (msg.Contains("{tname}")) msg = msg.Replace("{tname}", preview ? Service.ClientState.LocalPlayer.Name.TextValue : obj[0].Name.TextValue);
+        if (msg.Contains("{tname}")) msg = msg.Replace("{tname}", preview ? DalamudApi.ClientState.LocalPlayer.Name.TextValue : obj[0].Name.TextValue);
 
         var currentEt = LocalTimeToEorzeaTime();
         if (msg.Contains("{etmsg}"))
         {
-            var unsetMessage = Service.Configuration._etMessageUnset;
-            var setMessage = Service.Configuration._etMessageSet;
+            var unsetMessage = DalamudApi.Configuration._etMessageUnset;
+            var setMessage = DalamudApi.Configuration._etMessageSet;
 
             if (preview)
             {
@@ -223,11 +218,11 @@ internal static class Utils
             }
         }
 
-        var mapLinkPayload = CreateMapLinkPayload(preview ? Service.ClientState.LocalPlayer.Position : obj[0].Position, Service.ClientState.TerritoryType);
-        Service.GameGui.OpenMapWithMapLink(mapLinkPayload);
+        var mapLinkPayload = CreateMapLinkPayload(preview ? DalamudApi.ClientState.LocalPlayer.Position : obj[0].Position, DalamudApi.ClientState.TerritoryType);
+        DalamudApi.GameGui.OpenMapWithMapLink(mapLinkPayload);
 
-        var areaMapPtr = Service.GameGui.GetAddonByName("AreaMap", 1);
-        if (areaMapPtr != IntPtr.Zero) ((AtkUnitBase*)areaMapPtr)->Hide(false);
+        var areaMapPtr = DalamudApi.GameGui.GetAddonByName("AreaMap", 1);
+        if (areaMapPtr != IntPtr.Zero) ((AtkUnitBase*)areaMapPtr)->Hide2();
 
         if (preview)
         {
@@ -243,4 +238,5 @@ internal static class Utils
     private delegate bool PlaySound(uint effectId, long a2, long a3, byte a4);
 
     private unsafe delegate void ProcessChatBoxDelegate(UIModule* uiModule, IntPtr message, IntPtr unused, byte a4);
+
 }

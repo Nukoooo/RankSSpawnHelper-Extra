@@ -6,6 +6,7 @@ using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Logging;
+using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.GeneratedSheets;
@@ -33,8 +34,8 @@ internal class SummonMinion : IDisposable
 
     public SummonMinion()
     {
-        SignatureHelper.Initialise(this);
-        Service.Framework.Update += FrameworkOnUpdate;
+        DalamudApi.GameInteropProvider.InitializeFromAttributes(this);
+        DalamudApi.Framework.Update += FrameworkOnUpdate;
 
         unsafe bool IsMinionUnlocked(uint minionId)
         {
@@ -45,57 +46,57 @@ internal class SummonMinion : IDisposable
 
         Task.Run(async () =>
         {
-            while (Service.ClientState.LocalPlayer == null) await Task.Delay(1000);
+            while (DalamudApi.ClientState.LocalPlayer == null) await Task.Delay(1000);
 
-            var unlockedCompanions = Service.DataManager.GetExcelSheet<Companion>().Where(i =>
+            var unlockedCompanions = DalamudApi.DataManager.GetExcelSheet<Companion>().Where(i =>
                 IsMinionUnlocked(i.RowId) && i.RowId is 434 or 423 or 215 or 303 or 148);
 
             foreach (var companion in unlockedCompanions)
             {
                 PluginLog.Debug($"{companion.Singular.RawString}");
-                _unlockedMinions.Add(new Tuple<uint, string>(companion.RowId, companion.Singular.RawString));
+                _unlockedMinions.Add(new(companion.RowId, companion.Singular.RawString));
             }
         });
     }
 
     public void Dispose()
     {
-        Service.Framework.Update -= FrameworkOnUpdate;
+        DalamudApi.Framework.Update -= FrameworkOnUpdate;
     }
 
-    private void FrameworkOnUpdate(Framework framework)
+    private void FrameworkOnUpdate(IFramework framework)
     {
         if (DateTime.Now - _lastUpDateTime <= TimeSpan.FromSeconds(2))
         {
             return;
         }
 
-        if (!Service.Configuration._summonMinion)
+        if (!DalamudApi.Configuration._summonMinion)
             goto end;
 
-        if (!_minionMap.ContainsKey(Service.ClientState.TerritoryType)) goto end;
+        if (!_minionMap.ContainsKey(DalamudApi.ClientState.TerritoryType)) goto end;
 
-        if (!_minionMap.TryGetValue(Service.ClientState.TerritoryType, out var currnetMinionId)) goto end;
+        if (!_minionMap.TryGetValue(DalamudApi.ClientState.TerritoryType, out var currnetMinionId)) goto end;
 
         var minion = _unlockedMinions.Find(i => i.Item1 == currnetMinionId);
 
         if (minion == null) goto end;
 
-        if (Service.Condition[ConditionFlag.Mounted] || Service.Condition[ConditionFlag.Mounted2] ||
-            Service.Condition[ConditionFlag.Unknown57] ||
-            Service.Condition[ConditionFlag.Mounting] || Service.Condition[ConditionFlag.Mounting71])
+        if (DalamudApi.Condition[ConditionFlag.Mounted] || DalamudApi.Condition[ConditionFlag.Mounted2] ||
+            DalamudApi.Condition[ConditionFlag.Unknown57] ||
+            DalamudApi.Condition[ConditionFlag.Mounting] || DalamudApi.Condition[ConditionFlag.Mounting71])
             goto end;
 
         if (!CanUseAction(minion.Item1))
             goto end;
 
-        if (Service.ObjectTable[1] == null && CanUseAction(minion.Item1))
+        if (DalamudApi.ObjectTable[1] == null && CanUseAction(minion.Item1))
         {
             UseAction(minion.Item1);
             goto end;
         }
 
-        var obj = Service.ObjectTable[1];
+        var obj = DalamudApi.ObjectTable[1];
         if (obj == null)
         {
             UseAction(minion.Item1);
@@ -121,12 +122,12 @@ internal class SummonMinion : IDisposable
 
     private static unsafe bool CanUseAction(uint id)
     {
-        return ActionManager.Instance()->GetActionStatus(ActionType.Unk_8, id) == 0 &&
-               !ActionManager.Instance()->IsRecastTimerActive(ActionType.Spell, id);
+        return ActionManager.Instance()->GetActionStatus(ActionType.Companion, id) == 0 &&
+               !ActionManager.Instance()->IsRecastTimerActive(ActionType.Action, id);
     }
     
     private static unsafe void UseAction(uint id)
     {
-        ActionManager.Instance()->UseAction(ActionType.Unk_8, id);
+        ActionManager.Instance()->UseAction(ActionType.Companion, id);
     }
 }

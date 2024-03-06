@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
 		<LangVersion>10</LangVersion>
-		<Version>1.0.0.14</Version>
+		<Version>1.0.0.15</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -20,15 +20,12 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<DalamudLibPath>D:\XIVLauncherCN\Roaming\addon\Hooks\dev\</DalamudLibPath>
+		<DalamudLibPath>C:\XivLauncherCN\XIVLauncherCN\Roaming\addon\Hooks\dev\</DalamudLibPath>
 	</PropertyGroup>
 		
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="2.1.11" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\lib\ClickLib\ClickLib\ClickLib.csproj" />
+		<PackageReference Include="DalamudPackager" Version="2.1.12" />
+		<PackageReference Include="Reloaded.Memory" Version="2.0.27" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -61,7 +58,5 @@
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
-
-	<ProjectExtensions><VisualStudio><UserProperties ranksspawnhelper-extra_1json__JsonSchema="https://ffizer.github.io/ffizer/ffizer.schema.json" /></VisualStudio></ProjectExtensions>
 
 </Project>
